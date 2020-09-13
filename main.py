@@ -79,7 +79,7 @@ async def on_message(message):
         
             for x in range(WIDTH_LIMIT):
 
-                gray = rgb2gray( pix[x*(img.size[0]/WIDTH_LIMIT), y*(img.size[0]/HEIGHT_LIMIT)] )
+                gray = rgb2gray( pix[x*(img.size[0]/WIDTH_LIMIT), y*(img.size[1]/HEIGHT_LIMIT)] )
 
                 if (gray > maxG):
                     maxG = gray
@@ -96,7 +96,7 @@ async def on_message(message):
             for x in range(WIDTH_LIMIT):
 
                 # calc the gray value of the pixel
-                gray = rgb2gray( pix[x*(img.size[0]/WIDTH_LIMIT), y*(img.size[0]/HEIGHT_LIMIT)] )
+                gray = rgb2gray( pix[x*(img.size[0]/WIDTH_LIMIT), y*(img.size[1]/HEIGHT_LIMIT)] )
                 
                 letter = int(translate(gray, minG, maxG, 0, 69))
   
