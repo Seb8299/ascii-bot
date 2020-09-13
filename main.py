@@ -3,6 +3,12 @@ import discord
 from PIL import Image
 import requests
 import io
+import json
+
+
+config_file = open("config.json", "r").read()
+config = json.loads(config_file)
+token = config["token"]
 
 ASCII_CHARS = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. " #70 steps of brighness
 
@@ -58,20 +64,18 @@ async def on_message(message):
                             gray = int( rgb2gray( pix[x, y]) * 0.2734375 )
 
                             # finds the matching ascii char
-                            s += ASCII_CHARS[gray]
-                            if (xScale <= 2):
-                                s += ASCII_CHARS[gray]
-                            if (xScale == 1):
-                                s += ASCII_CHARS[gray]
+                            s += ASCII_CHARS[gray]+ASCII_CHARS[gray]+ASCII_CHARS[gray]+ASCII_CHARS[gray]
+                            # if (xScale <= 2):
+                            #     s += ASCII_CHARS[gray]
+                            # if (xScale == 1):
+                            #     s += ASCII_CHARS[gray]
 
                     final += s+"\n"
 
-            print(final)
-            test = "2"
 
             # embedVar = discord.Embed(title="asd", description="Desc")
             # embedVar.add_field(name="asd", value=str(final[5]), inline=False)
             # await message.channel.send(embed=embedVar)
 
 
-client.run('NzU0NDI2NTk4Njg5NjAzODA2.X10khQ.5bQPLBy_RqqZNBhDWEA73QLQPEs')
+client.run(token)
