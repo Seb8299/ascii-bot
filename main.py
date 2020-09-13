@@ -9,9 +9,7 @@ config_file = open("config.json", "r").read()
 config = json.loads(config_file)
 token = config["token"]
 
-ASCII_CHARS = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. " #70 steps of brighness
-
-LIMIT = 50
+ASCII_CHARS = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^'´. " #70 steps of brighness
 
 def rgb2gray(rgb):
 
@@ -20,7 +18,20 @@ def rgb2gray(rgb):
 
     return gray
 
+def translate(value, leftMin, leftMax, rightMin, rightMax):
+    # Figure out how 'wide' each range is
+    leftSpan = leftMax - leftMin
+    rightSpan = rightMax - rightMin
+
+    # Convert the left range into a 0-1 range (float)
+    valueScaled = float(value - leftMin) / float(leftSpan)
+
+    # Convert the 0-1 range into a value in the right range.
+    return rightMin + (valueScaled * rightSpan)
+
 client = discord.Client()
+
+
 
 @client.event
 async def on_ready():
@@ -34,47 +45,88 @@ async def on_message(message):
     # url with image?
     pic_ext = ['.jpg','.png','.jpeg']
     for ext in pic_ext:
-        if message.content.endswith(ext):
+        if not message.content.endswith(ext):
+            return
     
-            # get the image from url
-            r = requests.get(message.content)
-            image_bytes = io.BytesIO(r.content)
-            img = Image.open(image_bytes)
+        # get the image from url
+        r = requests.get(message.content)
+        image_bytes = io.BytesIO(r.content)
+        img = Image.open(image_bytes)
 
-            print(img.size)
+        attempt = 100
 
-            # saves all pixels of img
-            pix = img.load()
+        while True:  
+            WIDTH_LIMIT = attempt
 
-            xScale = int(img.size[0]/(LIMIT*1.5)) if img.size[0] > LIMIT else 1
-            yScale = int(img.size[1]/LIMIT) if img.size[1] > LIMIT else 1
+            WIDTH_LIMIT = int(WIDTH_LIMIT/2)    
+            HEIGHT_LIMIT = int((WIDTH_LIMIT * img.size[1]) / img.size[0])
+
+            WIDTH_LIMIT *= 2
             
-            final = ""
+            attempt -= 0.5
 
-            # goes through the pixels of the img
-            for y in range(img.size[1]):
-                s = ""
-            
-                if (y%yScale == 0):
-                    for x in range(img.size[0]):
+            if(WIDTH_LIMIT*HEIGHT_LIMIT+HEIGHT_LIMIT < 2000):
+                break
 
-                        if (x%xScale == 0):
-                            # calc the gray value of the pixel
-                            gray = int( rgb2gray( pix[x, y]) * 0.2734375 )
+        # saves all pixels of img
+        pix = img.load()
+        
+        # calc range of gray
+        minG = 265
+        maxG = 0
 
-                            # finds the matching ascii char
-                            s += ASCII_CHARS[gray]+ASCII_CHARS[gray]+ASCII_CHARS[gray]+ASCII_CHARS[gray]
-                            # if (xScale <= 2):
-                            #     s += ASCII_CHARS[gray]
-                            # if (xScale == 1):
-                            #     s += ASCII_CHARS[gray]
+        for y in range(HEIGHT_LIMIT):
+        
+            for x in range(WIDTH_LIMIT):
 
-                    final += s+"\n"
+                gray = rgb2gray( pix[x*(img.size[0]/WIDTH_LIMIT), y*(img.size[0]/HEIGHT_LIMIT)] )
 
+                if (gray > maxG):
+                    maxG = gray
 
-            # embedVar = discord.Embed(title="asd", description="Desc")
-            # embedVar.add_field(name="asd", value=str(final[5]), inline=False)
-            # await message.channel.send(embed=embedVar)
+                if (gray < minG):
+                    minG = gray
 
+        final = ""
+
+        # goes through the pixels of the img
+        for y in range(HEIGHT_LIMIT):
+            row = ""
+        
+            for x in range(WIDTH_LIMIT):
+
+                # calc the gray value of the pixel
+                gray = rgb2gray( pix[x*(img.size[0]/WIDTH_LIMIT), y*(img.size[0]/HEIGHT_LIMIT)] )
+                
+                letter = int(translate(gray, minG, maxG, 0, 69))
+  
+                # finds the matching ascii char
+                row += ASCII_CHARS[letter]
+
+            final += row+"\n"
+
+        print("("+str(WIDTH_LIMIT)+", "+str(HEIGHT_LIMIT)+")")
+        print(len(final))
+
+        # print(final)
+
+        # generate embed and send
+        embed=discord.Embed(title="Atful Artist", url="https://github.com/Seb8299/ascii-bot", description="Convert an Image to ASCII Art", color=0x42d400)
+        embed.set_author(name=message.author.name, icon_url=message.author.avatar_url)
+        embed.set_thumbnail(url="https://images0.gerstaecker.de/out/pictures/generated/1500_1500/pboxx-pixelboxx-2538173/Lavinia+Stempel%2C+Mystischer+Baum.jpg")
+        embed.add_field(name="("+str(WIDTH_LIMIT)+", "+str(HEIGHT_LIMIT)+")", value="```" + final + "```", inline=False)
+        
+        try:
+            await message.channel.send(embed=embed)
+        except:
+            pass
+
+        try:
+            await message.channel.send("```" + final + "```")
+        except:
+            pass
+        
+        
+        
 
 client.run(token)
