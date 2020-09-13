@@ -3,6 +3,7 @@ from PIL import Image
 import requests
 import io
 import json
+import re
 
 
 config_file = open("config.json", "r").read()
@@ -45,88 +46,88 @@ async def on_message(message):
     print("got message!")
 
     # url with image?
-    pic_ext = ['.jpg','.png','.jpeg']
-    for ext in pic_ext:
-        if not message.content.endswith(ext):
-            return
+    x = re.search("^\/paint \w+(\.jpg|\.jpeg|\.png)$", message)
+
+    if not x:
+        return
+
+    # get the image from url
+    r = requests.get(message.content)
+    image_bytes = io.BytesIO(r.content)
+    img = Image.open(image_bytes)
+
+    attempt = 100
+
+    while True:  
+        WIDTH_LIMIT = attempt
+
+        WIDTH_LIMIT = int(WIDTH_LIMIT/2)    
+        HEIGHT_LIMIT = int((WIDTH_LIMIT * img.size[1]) / img.size[0])
+
+        WIDTH_LIMIT *= 2
+        
+        attempt -= 0.5
+
+        if(WIDTH_LIMIT*HEIGHT_LIMIT+HEIGHT_LIMIT < 2000):
+            break
+
+    # saves all pixels of img
+    pix = img.load()
     
-        # get the image from url
-        r = requests.get(message.content)
-        image_bytes = io.BytesIO(r.content)
-        img = Image.open(image_bytes)
+    # calc range of gray
+    minG = 265
+    maxG = 0
 
-        attempt = 100
+    for y in range(HEIGHT_LIMIT):
+    
+        for x in range(WIDTH_LIMIT):
 
-        while True:  
-            WIDTH_LIMIT = attempt
+            gray = rgb2gray( pix[x*(img.size[0]/WIDTH_LIMIT), y*(img.size[1]/HEIGHT_LIMIT)] )
 
-            WIDTH_LIMIT = int(WIDTH_LIMIT/2)    
-            HEIGHT_LIMIT = int((WIDTH_LIMIT * img.size[1]) / img.size[0])
+            if (gray > maxG):
+                maxG = gray
 
-            WIDTH_LIMIT *= 2
+            if (gray < minG):
+                minG = gray
+
+    final = ""
+
+    # goes through the pixels of the img
+    for y in range(HEIGHT_LIMIT):
+        row = ""
+    
+        for x in range(WIDTH_LIMIT):
+
+            # calc the gray value of the pixel
+            gray = rgb2gray( pix[x*(img.size[0]/WIDTH_LIMIT), y*(img.size[1]/HEIGHT_LIMIT)] )
             
-            attempt -= 0.5
+            letter = int(translate(gray, minG, maxG, 0, 69))
 
-            if(WIDTH_LIMIT*HEIGHT_LIMIT+HEIGHT_LIMIT < 2000):
-                break
+            # finds the matching ascii char
+            row += ASCII_CHARS[letter]
 
-        # saves all pixels of img
-        pix = img.load()
-        
-        # calc range of gray
-        minG = 265
-        maxG = 0
+        final += row+"\n"
 
-        for y in range(HEIGHT_LIMIT):
-        
-            for x in range(WIDTH_LIMIT):
+    print("("+str(WIDTH_LIMIT)+", "+str(HEIGHT_LIMIT)+")")
+    print(len(final))
 
-                gray = rgb2gray( pix[x*(img.size[0]/WIDTH_LIMIT), y*(img.size[1]/HEIGHT_LIMIT)] )
+    # print(final)
 
-                if (gray > maxG):
-                    maxG = gray
+    # generate embed and send
+    embed=discord.Embed(title="Atful Artist", url="https://github.com/Seb8299/ascii-bot", description="Convert an Image to ASCII Art", color=0x42d400)
+    embed.set_author(name=message.author.name, icon_url=message.author.avatar_url)
+    embed.set_thumbnail(url="https://images0.gerstaecker.de/out/pictures/generated/1500_1500/pboxx-pixelboxx-2538173/Lavinia+Stempel%2C+Mystischer+Baum.jpg")
+    embed.add_field(name="("+str(WIDTH_LIMIT)+", "+str(HEIGHT_LIMIT)+")", value="```" + final + "```", inline=False)
+    
+    try:
+        await message.channel.send(embed=embed)
+    except:
+        pass
 
-                if (gray < minG):
-                    minG = gray
-
-        final = ""
-
-        # goes through the pixels of the img
-        for y in range(HEIGHT_LIMIT):
-            row = ""
-        
-            for x in range(WIDTH_LIMIT):
-
-                # calc the gray value of the pixel
-                gray = rgb2gray( pix[x*(img.size[0]/WIDTH_LIMIT), y*(img.size[1]/HEIGHT_LIMIT)] )
-                
-                letter = int(translate(gray, minG, maxG, 0, 69))
-  
-                # finds the matching ascii char
-                row += ASCII_CHARS[letter]
-
-            final += row+"\n"
-
-        print("("+str(WIDTH_LIMIT)+", "+str(HEIGHT_LIMIT)+")")
-        print(len(final))
-
-        # print(final)
-
-        # generate embed and send
-        embed=discord.Embed(title="Atful Artist", url="https://github.com/Seb8299/ascii-bot", description="Convert an Image to ASCII Art", color=0x42d400)
-        embed.set_author(name=message.author.name, icon_url=message.author.avatar_url)
-        embed.set_thumbnail(url="https://images0.gerstaecker.de/out/pictures/generated/1500_1500/pboxx-pixelboxx-2538173/Lavinia+Stempel%2C+Mystischer+Baum.jpg")
-        embed.add_field(name="("+str(WIDTH_LIMIT)+", "+str(HEIGHT_LIMIT)+")", value="```" + final + "```", inline=False)
-        
-        try:
-            await message.channel.send(embed=embed)
-        except:
-            pass
-
-        try:
-            await message.channel.send("```" + final + "```")
-        except:
-            pass
+    try:
+        await message.channel.send("```" + final + "```")
+    except:
+        pass
         
         
         
