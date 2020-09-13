@@ -41,6 +41,8 @@ async def on_ready():
 async def on_message(message):
     if message.author == client.user:
         return
+    
+    print("got message!")
 
     # url with image?
     pic_ext = ['.jpg','.png','.jpeg']
