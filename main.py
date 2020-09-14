@@ -51,8 +51,11 @@ async def on_message(message):
     if not x:
         return
 
+    # split the url from comand
+    substring = message.content.split()[1]
+
     # get the image from url
-    r = requests.get(message.content)
+    r = requests.get(substring)
     image_bytes = io.BytesIO(r.content)
     img = Image.open(image_bytes)
 
