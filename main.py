@@ -46,7 +46,7 @@ async def on_message(message):
     print("got message!")
 
     # url with image?
-    x = re.search("^\/paint \w+(\.jpg|\.jpeg|\.png)$", message)
+    x = re.search("^\/paint .+(\.jpg|\.jpeg|\.png)$", message)
 
     if not x:
         return
